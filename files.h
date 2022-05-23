@@ -28,8 +28,7 @@ char	*joinpath(char *a, char *b)
 	while (*a)
 		*ptr++ = *a++;
 
-	if (a[-1] != '/')
-		*ptr++ = '/';
+	*ptr++ = '/';
 
 	while ((*ptr++ = *b++));
 	return (s);
