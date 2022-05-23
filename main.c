@@ -5,70 +5,93 @@ void	usage(void) {
 	exit(1);
 }
 
-void	allocationError(void) {
-	puts("allocation error: cannot allocate");
-	exit(1);
-}
-
 void	addFlags(t_opts *opts, char *s)
 {
 	while (*s)
 	{
-		t_flags	flag = flags_map[(unsigned int)*s];
+		t_flags flag = flags_map[(unsigned int)*s];
 		if (flag == 0)
 		{
 			printf("ls: illegal option -- %c\n", *s);
 			usage();
 		}
+		if (flag & sorting_flag)
+			opts->sorting = flag & sorting_flag;
 		opts->flags |= flag;
 		++s;
 	}
 }
 
-void	checkFiles(t_opts *opts)
+void	pushFile(FileList *file_list, char *dir, char *name)
 {
 	struct stat buf;
+	char *path = joinpath(dir, name);
 
-	for (int i = 0; opts->files[i]; ++i)
-		if (stat(opts->files[i], &buf) == -1)
-			printf("ls: %s: %s\n", opts->files[i], strerror(errno));
-}
+	if (lstat(path, &buf) == -1)
+	{
+		printf("ls: %s: %s\n", name, strerror(errno));
+		free(path);
+		return ;
+	}
 
-typedef struct {
-	char	**files;
-	int		count;
-}	FileList;
+	File	*tmp = ft_malloc(sizeof(File) * ++file_list->count);
+	int i = file_list->count - 1;
 
-void	pushFile(FileList *file_list, char *s)
-{
-	file_list->files = realloc(
-		file_list->files,
-		sizeof(char *) * ++file_list->count
-	);
-	char	*file = strdup(s);
-	if (file_list->files == NULL || file == NULL)
-		allocationError();
-	file_list->files[file_list->count - 1] = file;
+	tmp[i].stat = buf;
+	tmp[i].name = ft_strdup(name);
+	tmp[i].path = path;
+
+	while (i--)
+		tmp[i] = file_list->files[i];
+
+	free(file_list->files);
+	file_list->files = tmp;
 }
 
 void	printFileList(FileList *file_list, t_opts *opts)
 {
 	for (int i = 0; i < file_list->count; ++i)
 	{
-		printf("%-40s", file_list->files[i]);
-		if (opts->flags & long_format)
-			putchar('\n');
+		File *file = file_list->files + i;
+
+		if (opts->flags & colors)
+		{
+			if (S_ISDIR(file->stat.st_mode))
+				put("\033[1;92m");
+			else if (S_ISLNK(file->stat.st_mode))
+				put("\033[95m");
+			else if (file->stat.st_mode & S_IXUSR)
+				put("\033[91m");
+		}
+
+		if ((opts->flags & reverse_order) && !(opts->flags & no_sort))
+			file = file_list->files + file_list->count - i - 1;
+
+		put(file->name);
+		put("\033[0m");
+
+		putch(((opts->flags & long_format) || i == file_list->count - 1)
+			? '\n'
+			: ' ');
 	}
-	putchar('\n');
 }
 
 void	freeFileList(FileList *file_list)
 {
 	while (file_list->count--)
-		free(file_list->files[file_list->count]);
+	{
+		free(file_list->files[file_list->count].name);
+		free(file_list->files[file_list->count].path);
+	}
 	free(file_list->files);
 	file_list->files = NULL;
 }
+
+const sorting_func_t	sorting_map[3] = {
+	[ascending_order]     = sort_ascending,
+	[time_modified_order] = sort_modified,
+	[time_access_order]   = sort_access
+};
 
 void	listFiles(char *path, t_opts *opts)
 {
@@ -83,15 +106,31 @@ void	listFiles(char *path, t_opts *opts)
 	struct dirent	*entry;
 
     while ((entry = readdir(dir)) != NULL)
-		pushFile(&file_list, entry->d_name);
+		if (opts->flags & show_all || *entry->d_name != '.')
+			pushFile(&file_list, path, entry->d_name);
 
-	// sort()
+	closedir(dir);
+
+	if (!(opts->flags & no_sort))
+		sortFileList(&file_list, sorting_map[opts->sorting]);
 
 	printFileList(&file_list, opts);
 
-	freeFileList(&file_list);
+	if (opts->flags & recusive)
+	{
+		for (int i = 0; i < file_list.count; ++i)
+		{
+			if (S_ISDIR(file_list.files[i].stat.st_mode)
+				&& ft_strcmp(file_list.files[i].name, ".")
+				&& ft_strcmp(file_list.files[i].name, ".."))
+			{
+				putch('\n'); put(file_list.files[i].path); puts(":");
+				listFiles(file_list.files[i].path, opts);
+			}
+		}
+	}
 
-    closedir(dir);
+	freeFileList(&file_list);
 }
 
 void	list(t_opts *opts)
@@ -110,16 +149,23 @@ void	list(t_opts *opts)
 	}
 }
 
+// ls -Ra ../
 int	main(int ac, char **av)
 {
-	t_opts	opts = { 0, NULL };
+	t_opts	opts = { 0, 0, NULL };
 	int		i = 1;
 
 	if (ac == 0)
 		usage();
 	while (av[i] && av[i][0] == '-')
+	{
+		if (ft_strcmp(av[i], "--") == 0)
+		{
+			++i;
+			break ;
+		}
 		addFlags(&opts, av[i++] + 1);
+	}
 	opts.files = av + i;
-	checkFiles(&opts);
 	list(&opts);
 }

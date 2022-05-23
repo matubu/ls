@@ -1,28 +1,36 @@
 #pragma once
 
+#include "mem.h"
+#include "files.h"
+#include "sort.h"
+
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 #include <dirent.h>
-#include <sys/stat.h>
 #include <sys/errno.h>
+#include <time.h>
 
 typedef enum {
-	long_format         = 1<<1, // -l show more info
-	recusive            = 1<<2, // -R recusive files
-	show_all            = 1<<3, // -a show dot files
-	colors              = 1<<4, // -G enable coloring
-	show_group_name     = 1<<5, // -g hide owner name (enable -l)
-	only_current_dir    = 1<<6, // -d only show the current directory
+	sorting_flag        = 3,
+	ascending_order     = 0, // default
+	time_modified_order = 1, // -t sort by time modified
+	time_access_order   = 2, // -u sort by last access
 
-	no_sort             = 1<<7, // -f disable sorting (enable -a)
-	descending_order    = 1<<8, // -r sort by reverse alphabetic order
-	time_modified_order = 1<<9, // -t sort by time modified
-	time_access_order   = 1<<10,// -u sort by last access
+	no_sort             = 1<<2, // -f disable sorting (enable -a)
+	reverse_order       = 1<<3, // -r reverse sorting order
+	long_format         = 1<<4, // -l show more info
+	recusive            = 1<<5, // -R recusive files
+	show_all            = 1<<6, // -a show dot files
+	colors              = 1<<7, // -G enable coloring
+	show_group_name     = 1<<8, // -g hide owner name (enable -l)
+	only_current_dir    = 1<<9, // -d only show the current directory
+
 }	t_flags;
 
 typedef struct {
 	t_flags	flags;
+	t_flags	sorting;
 	char	**files;
 }	t_opts;
 
@@ -34,8 +42,8 @@ const t_flags	flags_map[256] = {
 	['g'] = long_format | show_group_name,
 	['d'] = only_current_dir,
 
+	['r'] = reverse_order,
 	['f'] = show_all | no_sort,
-	['r'] = descending_order,
 	['t'] = time_modified_order,
 	['u'] = time_access_order,
 };
