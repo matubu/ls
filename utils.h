@@ -38,3 +38,29 @@ int	puts(const char *s)
 {
 	return put(s) + putch('\n');
 }
+
+void	putunp(size_t n)
+{
+	char	buf[10];
+	int		i = 10;
+
+	do {
+		buf[--i] = '0' + n % 10;
+		n /= 10;
+	} while (n);
+	while (i--)
+		buf[i] = ' ';
+	write(1, buf, 10);
+}
+
+void	putun(size_t n)
+{
+	char	buf[10];
+	int		i = 10;
+
+	do {
+		buf[--i] = '0' + n % 10;
+		n /= 10;
+	} while (n);
+	write(1, buf + i, 10 - i);
+}

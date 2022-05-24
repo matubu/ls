@@ -48,12 +48,57 @@ void	pushFile(FileList *file_list, char *dir, char *name)
 	file_list->files = tmp;
 }
 
+void	put_perms(mode_t mode)
+{
+	if (S_ISDIR(mode))
+		putch('d');
+	else if (S_ISLNK(mode))
+		putch('l');
+	else
+		putch('-');
+	for (int i = 3; i--;)
+	{
+		putch(mode & (1 << (2+i*3)) ? 'r' : '-');
+		putch(mode & (1 << (1+i*3)) ? 'w' : '-');
+		putch(mode & (1 << (0+i*3)) ? 'x' : '-');
+	}
+}
+
 void	printFileList(FileList *file_list, t_opts *opts)
 {
+	if (opts->flags & long_format)
+	{
+		int	total = 0;
+		for (int i = 0; i < file_list->count; ++i)
+			total += file_list->files[i].stat.st_blocks;
+		put("total "); putun(total); putch('\n');
+	}
+
 	for (int i = 0; i < file_list->count; ++i)
 	{
-		File *file = file_list->files + i;
+		File *file = (opts->flags & reverse_order) && !(opts->flags & no_sort)
+			? file_list->files + file_list->count - i - 1
+			: file_list->files + i;
 
+		if (opts->flags & long_format)
+		{
+			/* PERMS */
+			put_perms(file->stat.st_mode); putch(' ');
+			/* NB LINK */
+			putun(file->stat.st_nlink); putch(' ');
+			/* OWNER */
+			if (!(opts->flags & show_group_name))
+			{ put(getpwuid(file->stat.st_uid)->pw_name); putch(' '); }
+			/* GROUP */
+			put(getgrgid(file->stat.st_gid)->gr_name); putch(' ');
+			/* SIZE */
+			putunp(file->stat.st_size); putch(' ');
+			/* LAST MODIF */
+			char *tm = ctime(&file->stat.st_mtimespec.tv_sec);
+			write(1, tm, len(tm) - 1); putch(' ');
+		}
+
+		/* COLOR */
 		if (opts->flags & colors)
 		{
 			if (S_ISDIR(file->stat.st_mode))
@@ -64,13 +109,21 @@ void	printFileList(FileList *file_list, t_opts *opts)
 				put("\033[91m");
 		}
 
-		if ((opts->flags & reverse_order) && !(opts->flags & no_sort))
-			file = file_list->files + file_list->count - i - 1;
-
+		/* FILE */
 		put(file->name);
-		put("\033[0m");
+		/* COLOR RESET */
+		if (opts->flags & colors) put("\033[0m");
 
-		putch(((opts->flags & long_format) || i == file_list->count - 1)
+		/* LINK RESOLVE */
+		if ((opts->flags & long_format) && S_ISLNK(file->stat.st_mode))
+		{
+			put(" -> ");
+			char buf[1024];
+			write(1, buf, readlink(file->path, buf, 1024));
+		}
+
+		/* SEP */
+		putch(((opts->flags & nl_format) || i == file_list->count - 1)
 			? '\n'
 			: ' ');
 	}
@@ -111,6 +164,9 @@ void	listFiles(char *path, t_opts *opts)
 
 	closedir(dir);
 
+	if (file_list.count == 0)
+		goto clean;
+
 	if (!(opts->flags & no_sort))
 		sortFileList(&file_list, sorting_map[opts->sorting]);
 
@@ -130,6 +186,7 @@ void	listFiles(char *path, t_opts *opts)
 		}
 	}
 
+	clean:
 	freeFileList(&file_list);
 }
 
@@ -149,7 +206,8 @@ void	list(t_opts *opts)
 	}
 }
 
-// ls -Ra ../
+// TODO long format
+// TODO remove printf
 int	main(int ac, char **av)
 {
 	t_opts	opts = { 0, 0, NULL };
@@ -167,5 +225,11 @@ int	main(int ac, char **av)
 		addFlags(&opts, av[i++] + 1);
 	}
 	opts.files = av + i;
+	if (!isatty(1))
+	{
+		opts.flags &= ~colors;
+		opts.flags |= nl_format;
+	}
 	list(&opts);
+	system("leaks ft_ls | grep leaked");
 }

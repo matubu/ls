@@ -10,6 +10,8 @@
 #include <dirent.h>
 #include <sys/errno.h>
 #include <time.h>
+#include <grp.h>
+#include <pwd.h>
 
 typedef enum {
 	sorting_flag        = 3,
@@ -19,12 +21,13 @@ typedef enum {
 
 	no_sort             = 1<<2, // -f disable sorting (enable -a)
 	reverse_order       = 1<<3, // -r reverse sorting order
-	long_format         = 1<<4, // -l show more info
-	recusive            = 1<<5, // -R recusive files
-	show_all            = 1<<6, // -a show dot files
-	colors              = 1<<7, // -G enable coloring
-	show_group_name     = 1<<8, // -g hide owner name (enable -l)
-	only_current_dir    = 1<<9, // -d only show the current directory
+	nl_format           = 1<<4, // use nl instead of spaces
+	long_format         = 1<<5, // -l show more info
+	recusive            = 1<<6, // -R recusive files
+	show_all            = 1<<7, // -a show dot files
+	colors              = 1<<8, // -G enable coloring
+	show_group_name     = 1<<9, // -g hide owner name (enable -l)
+	only_current_dir    = 1<<10, // -d only show the current directory
 
 }	t_flags;
 
@@ -35,11 +38,11 @@ typedef struct {
 }	t_opts;
 
 const t_flags	flags_map[256] = {
-	['l'] = long_format,
+	['l'] = long_format | nl_format,
 	['R'] = recusive,
 	['a'] = show_all,
 	['G'] = colors,
-	['g'] = long_format | show_group_name,
+	['g'] = long_format | nl_format | show_group_name,
 	['d'] = only_current_dir,
 
 	['r'] = reverse_order,

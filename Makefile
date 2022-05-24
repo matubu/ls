@@ -4,7 +4,7 @@ SRCS = $(wildcard *.c)
 DEPS = $(wildcard *.h) Makefile
 OBJS = $(SRCS:.c=.o)
 
-CFLAGS = -Wall -Wextra -Werror -Ofast -fsanitize=address -g
+CFLAGS = -Wall -Wextra -Werror -Ofast# -fsanitize=address -g
 
 all: $(NAME)
 
