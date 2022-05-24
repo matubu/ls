@@ -12,7 +12,7 @@ void	addFlags(t_opts *opts, char *s)
 		t_flags flag = flags_map[(unsigned int)*s];
 		if (flag == 0)
 		{
-			printf("ls: illegal option -- %c\n", *s);
+			put("ls: illegal option -- "); putch(*s); putch('\n');
 			usage();
 		}
 		if (flag & sorting_flag)
@@ -22,46 +22,24 @@ void	addFlags(t_opts *opts, char *s)
 	}
 }
 
-void	pushFile(FileList *file_list, char *dir, char *name)
-{
-	struct stat buf;
-	char *path = joinpath(dir, name);
-
-	if (lstat(path, &buf) == -1)
-	{
-		printf("ls: %s: %s\n", name, strerror(errno));
-		free(path);
-		return ;
-	}
-
-	File	*tmp = ft_malloc(sizeof(File) * ++file_list->count);
-	int i = file_list->count - 1;
-
-	tmp[i].stat = buf;
-	tmp[i].name = ft_strdup(name);
-	tmp[i].path = path;
-
-	while (i--)
-		tmp[i] = file_list->files[i];
-
-	free(file_list->files);
-	file_list->files = tmp;
-}
-
 void	put_perms(mode_t mode)
 {
+	char perms[10] = "----------";
+
 	if (S_ISDIR(mode))
-		putch('d');
+		perms[0] = 'd';
 	else if (S_ISLNK(mode))
-		putch('l');
-	else
-		putch('-');
-	for (int i = 3; i--;)
+		perms[0] = 'l';
+	for (int i = 9, j = 1; (i -= 3) >= 0; j += 3)
 	{
-		putch(mode & (1 << (2+i*3)) ? 'r' : '-');
-		putch(mode & (1 << (1+i*3)) ? 'w' : '-');
-		putch(mode & (1 << (0+i*3)) ? 'x' : '-');
+		if (mode & (1 << (2+i)))
+			perms[j+0] = 'r';
+		if (mode & (1 << (1+i)))
+			perms[j+1] = 'w';
+		if (mode & (1 << (0+i)))
+			perms[j+2] = 'x';
 	}
+	write(1, perms, 10);
 }
 
 void	printFileList(FileList *file_list, t_opts *opts)
@@ -152,10 +130,10 @@ void	listFiles(char *path, t_opts *opts)
 
 	if (dir == NULL)
 	{
-		printf("ls: %s: %s\n", path, strerror(errno));
+		put("ls: "); put(path); put(": "); put(strerror(errno)); putch('\n');
 		return ;
 	}
-	FileList		file_list = { NULL, 0 };
+	FileList		file_list = { NULL, 0, 0 };
 	struct dirent	*entry;
 
     while ((entry = readdir(dir)) != NULL)
@@ -206,8 +184,7 @@ void	list(t_opts *opts)
 	}
 }
 
-// TODO long format
-// TODO remove printf
+// TODO fix sort with -u
 int	main(int ac, char **av)
 {
 	t_opts	opts = { 0, 0, NULL };
@@ -231,5 +208,4 @@ int	main(int ac, char **av)
 		opts.flags |= nl_format;
 	}
 	list(&opts);
-	system("leaks ft_ls | grep leaked");
 }

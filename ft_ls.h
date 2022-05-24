@@ -4,11 +4,8 @@
 #include "files.h"
 #include "sort.h"
 
-#include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
-#include <sys/errno.h>
 #include <time.h>
 #include <grp.h>
 #include <pwd.h>

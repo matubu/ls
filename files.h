@@ -4,6 +4,8 @@
 #include "utils.h"
 
 #include <sys/stat.h>
+#include <sys/errno.h>
+#include <string.h>
 
 typedef struct {
 	struct stat	stat;
@@ -14,6 +16,7 @@ typedef struct {
 typedef struct {
 	File	*files;
 	int		count;
+	int		cap;
 }	FileList;
 
 char	*joinpath(char *a, char *b)
@@ -32,4 +35,34 @@ char	*joinpath(char *a, char *b)
 
 	while ((*ptr++ = *b++));
 	return (s);
+}
+
+void	pushFile(FileList *ls, char *dir, char *name)
+{
+	struct stat buf;
+	char *path = joinpath(dir, name);
+
+	if (lstat(path, &buf) == -1)
+	{
+		put("ls: "); put(name); put(": "); put(strerror(errno)); putch('\n');
+		free(path);
+		return ;
+	}
+
+	int i = ls->count++;
+	if (ls->count > ls->cap)
+	{
+		ls->cap = ls->cap ? ls->cap << 1 : 16;
+		File	*tmp = ft_malloc(sizeof(File) * ls->cap);
+
+		for (int j = i; j--;)
+			tmp[j] = ls->files[j];
+
+		free(ls->files);
+		ls->files = tmp;
+	}
+
+	ls->files[i].stat = buf;
+	ls->files[i].name = ft_strdup(name);
+	ls->files[i].path = path;
 }
