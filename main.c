@@ -61,7 +61,7 @@ void	printFileList(FileList *file_list, t_opts *opts)
 		if (opts->flags & long_format)
 		{
 			/* Perms */
-			put_perms(file->stat.st_mode);
+			put_perms(file->stat.st_mode); putch(' ');
 			/* Nb links */
 			putun(file->stat.st_nlink); putch(' ');
 			/* Owner */

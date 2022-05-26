@@ -53,7 +53,7 @@ File	*pushFile(FileList *ls, char *dir, char *name)
 	int i = ls->count++;
 	if (ls->count > ls->cap)
 	{
-		ls->cap = ls->cap ? ls->cap << 1 : 16;
+		ls->cap = ls->cap ? ls->cap << 2 : 16;
 		File	*tmp = ft_malloc(sizeof(File) * ls->cap);
 
 		for (int j = i; j--;)
