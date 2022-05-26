@@ -12,14 +12,7 @@ long long sort_ascending(const File *a, const File *b)
 
 long long sort_modified(const File *a, const File *b)
 {
-	return (b->stat.st_mtimespec.tv_sec - a->stat.st_mtimespec.tv_sec);
-}
-
-#include <stdio.h>
-
-long long sort_access(const File *a, const File *b)
-{
-	long long d = b->stat.st_atimespec.tv_sec - a->stat.st_atimespec.tv_sec;
+	long long d = b->time.tv_sec - a->time.tv_sec;
 	if (d) return (d);
 	return (sort_ascending(a, b));
 }

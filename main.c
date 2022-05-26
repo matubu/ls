@@ -60,19 +60,19 @@ void	printFileList(FileList *file_list, t_opts *opts)
 
 		if (opts->flags & long_format)
 		{
-			/* PERMS */
-			put_perms(file->stat.st_mode); putch(' ');
-			/* NB LINK */
+			/* Perms */
+			put_perms(file->stat.st_mode);
+			/* Nb links */
 			putun(file->stat.st_nlink); putch(' ');
-			/* OWNER */
+			/* Owner */
 			if (!(opts->flags & show_group_name))
 			{ put(getpwuid(file->stat.st_uid)->pw_name); putch(' '); }
-			/* GROUP */
+			/* Group */
 			put(getgrgid(file->stat.st_gid)->gr_name); putch(' ');
-			/* SIZE */
+			/* Size */
 			putunp(file->stat.st_size); putch(' ');
-			/* LAST MODIF */
-			char *tm = ctime(&file->stat.st_mtimespec.tv_sec);
+			/* Time */
+			char *tm = ctime(&file->time.tv_sec);
 			write(1, tm, len(tm) - 1); putch(' ');
 		}
 
@@ -118,10 +118,9 @@ void	freeFileList(FileList *file_list)
 	file_list->files = NULL;
 }
 
-const sorting_func_t	sorting_map[3] = {
+const sorting_func_t	sorting_map[2] = {
 	[ascending_order]     = sort_ascending,
-	[time_modified_order] = sort_modified,
-	[time_access_order]   = sort_access
+	[time_order] = sort_modified
 };
 
 void	listFiles(char *path, t_opts *opts)
@@ -137,8 +136,16 @@ void	listFiles(char *path, t_opts *opts)
 	struct dirent	*entry;
 
     while ((entry = readdir(dir)) != NULL)
+	{
 		if (opts->flags & show_all || *entry->d_name != '.')
-			pushFile(&file_list, path, entry->d_name);
+		{
+			File *file = pushFile(&file_list, path, entry->d_name);
+			if (file == NULL) continue ;
+			file->time = opts->flags & use_access_time
+				? file->stat.st_atimespec
+				: file->stat.st_mtimespec;
+		}
+	}
 
 	closedir(dir);
 
@@ -164,7 +171,7 @@ void	listFiles(char *path, t_opts *opts)
 		}
 	}
 
-	clean:
+clean:
 	freeFileList(&file_list);
 }
 
@@ -184,7 +191,6 @@ void	list(t_opts *opts)
 	}
 }
 
-// TODO fix sort with -u
 int	main(int ac, char **av)
 {
 	t_opts	opts = { 0, 0, NULL };

@@ -4,9 +4,11 @@ SRCS = $(wildcard *.c)
 DEPS = $(wildcard *.h) Makefile
 OBJS = $(SRCS:.c=.o)
 
-CFLAGS = -Wall -Wextra -Werror -Ofast# -fsanitize=address -g
+CFLAGS = -Wall -Wextra -Werror -fsanitize=address -g # -Ofast
 
 all: $(NAME)
+
+bonus: all
 
 %.o: %.c $(DEPS)
 	gcc $(CFLAGS) -c $< -o $@
@@ -22,11 +24,4 @@ fclean: clean
 
 re: fclean all
 
-test: all
-	ls $(ARGS)
-	ls $(ARGS) | cat > .ls.out
-	ls $(ARGS)
-	./ft_ls -l $(ARGS) > .ft_ls.out
-	diff .ls.out .ft_ls.out
-
-.PHONY: all clean fclean re
+.PHONY: all bonus clean fclean re

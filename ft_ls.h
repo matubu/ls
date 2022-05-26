@@ -11,11 +11,11 @@
 #include <pwd.h>
 
 typedef enum {
-	sorting_flag        = 3,
+	sorting_flag        = 1,
 	ascending_order     = 0, // default
-	time_modified_order = 1, // -t sort by time modified
-	time_access_order   = 2, // -u sort by last access
+	time_order          = 1, // -t sort by time modified
 
+	use_access_time     = 1<<1, // -u sort by last access
 	no_sort             = 1<<2, // -f disable sorting (enable -a)
 	reverse_order       = 1<<3, // -r reverse sorting order
 	nl_format           = 1<<4, // use nl instead of spaces
@@ -44,6 +44,6 @@ const t_flags	flags_map[256] = {
 
 	['r'] = reverse_order,
 	['f'] = show_all | no_sort,
-	['t'] = time_modified_order,
-	['u'] = time_access_order,
+	['t'] = time_order,
+	['u'] = use_access_time,
 };

@@ -8,9 +8,10 @@
 #include <string.h>
 
 typedef struct {
-	struct stat	stat;
-	char		*name;
-	char		*path;
+	struct stat		stat;
+	char			*name;
+	char			*path;
+	struct timespec	time;
 } File;
 
 typedef struct {
@@ -37,7 +38,7 @@ char	*joinpath(char *a, char *b)
 	return (s);
 }
 
-void	pushFile(FileList *ls, char *dir, char *name)
+File	*pushFile(FileList *ls, char *dir, char *name)
 {
 	struct stat buf;
 	char *path = joinpath(dir, name);
@@ -46,7 +47,7 @@ void	pushFile(FileList *ls, char *dir, char *name)
 	{
 		put("ls: "); put(name); put(": "); put(strerror(errno)); putch('\n');
 		free(path);
-		return ;
+		return (NULL);
 	}
 
 	int i = ls->count++;
@@ -65,4 +66,6 @@ void	pushFile(FileList *ls, char *dir, char *name)
 	ls->files[i].stat = buf;
 	ls->files[i].name = ft_strdup(name);
 	ls->files[i].path = path;
+
+	return (ls->files + i);
 }
