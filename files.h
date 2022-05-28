@@ -1,9 +1,9 @@
 #pragma once
 
+#include "opts.h"
 #include "mem.h"
 #include "utils.h"
 
-#include <sys/stat.h>
 #include <sys/errno.h>
 #include <string.h>
 
@@ -38,16 +38,15 @@ char	*joinpath(char *a, char *b)
 	return (s);
 }
 
-File	*pushFile(FileList *ls, char *dir, char *name)
+void	pushFile(FileList *ls, char *path, char *name, t_opts *opts)
 {
 	struct stat buf;
-	char *path = joinpath(dir, name);
 
 	if (lstat(path, &buf) == -1)
 	{
 		put("ls: "); put(name); put(": "); put(strerror(errno)); putch('\n');
 		free(path);
-		return (NULL);
+		return ;
 	}
 
 	int i = ls->count++;
@@ -67,5 +66,18 @@ File	*pushFile(FileList *ls, char *dir, char *name)
 	ls->files[i].name = ft_strdup(name);
 	ls->files[i].path = path;
 
-	return (ls->files + i);
+	ls->files[i].time = opts->flags & use_access_time
+		? ls->files[i].stat.st_atimespec
+		: ls->files[i].stat.st_mtimespec;
+}
+
+void	freeFileList(FileList *file_list)
+{
+	while (file_list->count--)
+	{
+		free(file_list->files[file_list->count].name);
+		free(file_list->files[file_list->count].path);
+	}
+	free(file_list->files);
+	file_list->files = NULL;
 }

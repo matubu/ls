@@ -1,4 +1,12 @@
-#include "ft_ls.h"
+#include "mem.h"
+#include "files.h"
+#include "sort.h"
+
+#include <stdlib.h>
+#include <dirent.h>
+#include <time.h>
+#include <grp.h>
+#include <pwd.h>
 
 void	usage(void) {
 	puts("usage: ft_ls [-GRagdflrtu] [file ...]");
@@ -107,17 +115,6 @@ void	printFileList(FileList *file_list, t_opts *opts)
 	}
 }
 
-void	freeFileList(FileList *file_list)
-{
-	while (file_list->count--)
-	{
-		free(file_list->files[file_list->count].name);
-		free(file_list->files[file_list->count].path);
-	}
-	free(file_list->files);
-	file_list->files = NULL;
-}
-
 const sorting_func_t	sorting_map[2] = {
 	[ascending_order]     = sort_ascending,
 	[time_order] = sort_modified
@@ -136,16 +133,8 @@ void	listFiles(char *path, t_opts *opts)
 	struct dirent	*entry;
 
     while ((entry = readdir(dir)) != NULL)
-	{
 		if (opts->flags & show_all || *entry->d_name != '.')
-		{
-			File *file = pushFile(&file_list, path, entry->d_name);
-			if (file == NULL) continue ;
-			file->time = opts->flags & use_access_time
-				? file->stat.st_atimespec
-				: file->stat.st_mtimespec;
-		}
-	}
+			pushFile(&file_list, joinpath(path, entry->d_name), entry->d_name, opts);
 
 	closedir(dir);
 

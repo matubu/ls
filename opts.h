@@ -1,14 +1,6 @@
 #pragma once
 
-#include "mem.h"
-#include "files.h"
-#include "sort.h"
-
-#include <stdlib.h>
-#include <dirent.h>
-#include <time.h>
-#include <grp.h>
-#include <pwd.h>
+#include <sys/stat.h>
 
 typedef enum {
 	sorting_flag        = 1,
@@ -29,9 +21,9 @@ typedef enum {
 }	t_flags;
 
 typedef struct {
-	t_flags	flags;
-	t_flags	sorting;
-	char	**files;
+	t_flags		flags;
+	t_flags		sorting;
+	char		**files;
 }	t_opts;
 
 const t_flags	flags_map[256] = {
