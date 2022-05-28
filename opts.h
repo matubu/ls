@@ -23,7 +23,6 @@ typedef enum {
 typedef struct {
 	t_flags		flags;
 	t_flags		sorting;
-	char		**files;
 }	t_opts;
 
 const t_flags	flags_map[256] = {

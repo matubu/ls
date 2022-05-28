@@ -78,6 +78,7 @@ void	freeFileList(FileList *file_list)
 		free(file_list->files[file_list->count].name);
 		free(file_list->files[file_list->count].path);
 	}
-	free(file_list->files);
+	if (file_list->files)
+		free(file_list->files);
 	file_list->files = NULL;
 }

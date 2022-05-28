@@ -50,6 +50,57 @@ void	put_perms(mode_t mode)
 	write(1, perms, 10);
 }
 
+void	printFile(File *file, t_opts *opts, int fidx)
+{
+	if (!(opts->flags & nl_format) && fidx)
+		putch(' ');
+
+	if (opts->flags & long_format)
+	{
+		/* Perms */
+		put_perms(file->stat.st_mode); putch(' ');
+		/* Nb links */
+		putun(file->stat.st_nlink); putch(' ');
+		/* Owner */
+		if (!(opts->flags & show_group_name))
+		{ put(getpwuid(file->stat.st_uid)->pw_name); putch(' '); }
+		/* Group */
+		put(getgrgid(file->stat.st_gid)->gr_name); putch(' ');
+		/* Size */
+		putunp(file->stat.st_size); putch(' ');
+		/* Time */
+		char *tm = ctime(&file->time.tv_sec);
+		write(1, tm, len(tm) - 1); putch(' ');
+	}
+
+	/* COLOR */
+	if (opts->flags & colors)
+	{
+		if (S_ISDIR(file->stat.st_mode))
+			put("\033[1;92m");
+		else if (S_ISLNK(file->stat.st_mode))
+			put("\033[95m");
+		else if (file->stat.st_mode & S_IXUSR)
+			put("\033[91m");
+	}
+
+	/* FILE */
+	put(file->name);
+	/* COLOR RESET */
+	if (opts->flags & colors) put("\033[0m");
+
+	/* LINK RESOLVE */
+	if ((opts->flags & long_format) && S_ISLNK(file->stat.st_mode))
+	{
+		put(" -> ");
+		char buf[1024];
+		write(1, buf, readlink(file->path, buf, 1024));
+	}
+
+	if (opts->flags & nl_format)
+		putch('\n');
+}
+
 void	printFileList(FileList *file_list, t_opts *opts)
 {
 	if (opts->flags & long_format)
@@ -66,52 +117,7 @@ void	printFileList(FileList *file_list, t_opts *opts)
 			? file_list->files + file_list->count - i - 1
 			: file_list->files + i;
 
-		if (opts->flags & long_format)
-		{
-			/* Perms */
-			put_perms(file->stat.st_mode); putch(' ');
-			/* Nb links */
-			putun(file->stat.st_nlink); putch(' ');
-			/* Owner */
-			if (!(opts->flags & show_group_name))
-			{ put(getpwuid(file->stat.st_uid)->pw_name); putch(' '); }
-			/* Group */
-			put(getgrgid(file->stat.st_gid)->gr_name); putch(' ');
-			/* Size */
-			putunp(file->stat.st_size); putch(' ');
-			/* Time */
-			char *tm = ctime(&file->time.tv_sec);
-			write(1, tm, len(tm) - 1); putch(' ');
-		}
-
-		/* COLOR */
-		if (opts->flags & colors)
-		{
-			if (S_ISDIR(file->stat.st_mode))
-				put("\033[1;92m");
-			else if (S_ISLNK(file->stat.st_mode))
-				put("\033[95m");
-			else if (file->stat.st_mode & S_IXUSR)
-				put("\033[91m");
-		}
-
-		/* FILE */
-		put(file->name);
-		/* COLOR RESET */
-		if (opts->flags & colors) put("\033[0m");
-
-		/* LINK RESOLVE */
-		if ((opts->flags & long_format) && S_ISLNK(file->stat.st_mode))
-		{
-			put(" -> ");
-			char buf[1024];
-			write(1, buf, readlink(file->path, buf, 1024));
-		}
-
-		/* SEP */
-		putch(((opts->flags & nl_format) || i == file_list->count - 1)
-			? '\n'
-			: ' ');
+		printFile(file, opts, i);
 	}
 }
 
@@ -120,8 +126,10 @@ const sorting_func_t	sorting_map[2] = {
 	[time_order] = sort_modified
 };
 
-void	listFiles(char *path, t_opts *opts)
+void	listFiles(char *path, t_opts *opts, int showpath)
 {
+	if (showpath)
+	{ putch('\n'); put(path); puts(":"); }
 	DIR				*dir = opendir(path);
 
 	if (dir == NULL)
@@ -147,42 +155,19 @@ void	listFiles(char *path, t_opts *opts)
 	printFileList(&file_list, opts);
 
 	if (opts->flags & recusive)
-	{
 		for (int i = 0; i < file_list.count; ++i)
-		{
 			if (S_ISDIR(file_list.files[i].stat.st_mode)
 				&& ft_strcmp(file_list.files[i].name, ".")
 				&& ft_strcmp(file_list.files[i].name, ".."))
-			{
-				putch('\n'); put(file_list.files[i].path); puts(":");
-				listFiles(file_list.files[i].path, opts);
-			}
-		}
-	}
+				listFiles(file_list.files[i].path, opts, 1);
 
 clean:
 	freeFileList(&file_list);
 }
 
-void	list(t_opts *opts)
-{
-	char	**files = opts->files;
-
-	if (*files)
-	{
-		do {
-			listFiles(*files, opts);
-		} while (*++files);
-	}
-	else
-	{
-		listFiles(".", opts);
-	}
-}
-
 int	main(int ac, char **av)
 {
-	t_opts	opts = { 0, 0, NULL };
+	t_opts	opts = { 0, 0 };
 	int		i = 1;
 
 	if (ac == 0)
@@ -196,11 +181,32 @@ int	main(int ac, char **av)
 		}
 		addFlags(&opts, av[i++] + 1);
 	}
-	opts.files = av + i;
 	if (!isatty(1))
 	{
 		opts.flags &= ~colors;
 		opts.flags |= nl_format;
 	}
-	list(&opts);
+
+	if (i >= ac)
+	{
+		listFiles(".", &opts, 0);
+		return (0);
+	}
+
+	FileList	files = { NULL, 0, 0 };
+
+	for (char **file = av + i; *file; ++file)
+		pushFile(&files, ft_strdup(*file), *file, &opts);
+
+	int	fidx = 0;
+	for (int j = 0; j < files.count; ++j)
+		if (S_ISREG(files.files[j].stat.st_mode))
+			printFile(files.files + j, &opts, fidx);
+
+	for (int j = 0; j < files.count; ++j)
+		if (S_ISDIR(files.files[j].stat.st_mode))
+			listFiles(files.files[j].path, &opts, ac - i > 1);
+
+	freeFileList(&files);
+	return (0);
 }
