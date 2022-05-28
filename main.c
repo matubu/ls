@@ -161,6 +161,9 @@ void	listFiles(char *path, t_opts *opts, int showpath)
 				&& ft_strcmp(file_list.files[i].name, ".."))
 				listFiles(file_list.files[i].path, opts, 1);
 
+	if (!(opts->flags & nl_format))
+		putch('\n');
+
 clean:
 	freeFileList(&file_list);
 }
@@ -198,10 +201,15 @@ int	main(int ac, char **av)
 	for (char **file = av + i; *file; ++file)
 		pushFile(&files, ft_strdup(*file), *file, &opts);
 
+	if (!(opts.flags & no_sort))
+		sortFileList(&files, sorting_map[opts.sorting]);
+
 	int	fidx = 0;
 	for (int j = 0; j < files.count; ++j)
 		if (S_ISREG(files.files[j].stat.st_mode))
-			printFile(files.files + j, &opts, fidx);
+			printFile(files.files + j, &opts, fidx++);
+	if (fidx && !(opts.flags & nl_format))
+		putch('\n');
 
 	for (int j = 0; j < files.count; ++j)
 		if (S_ISDIR(files.files[j].stat.st_mode))
