@@ -126,15 +126,17 @@ const sorting_func_t	sorting_map[2] = {
 	[time_order] = sort_modified
 };
 
-void	listFiles(char *path, t_opts *opts, int showpath)
+void	listFiles(File *file, t_opts *opts, int showpath)
 {
+	char *path = file->path;
+
 	if (showpath)
 	{ put(path); puts(":"); }
 	DIR				*dir = opendir(path);
 
 	if (dir == NULL)
 	{
-		put("ls: "); put(path); put(": "); put(strerror(errno)); putch('\n');
+		put("ls: "); put(file->name); put(": "); put(strerror(errno)); putch('\n');
 		return ;
 	}
 	FileList		file_list = { NULL, 0, 0 };
@@ -164,7 +166,7 @@ void	listFiles(char *path, t_opts *opts, int showpath)
 				&& ft_strcmp(file_list.files[i].name, ".."))
 				{
 					putch('\n');
-					listFiles(file_list.files[i].path, opts, 1);
+					listFiles(file_list.files + i, opts, 1);
 				}
 clean:
 	freeFileList(&file_list);
@@ -192,13 +194,10 @@ int	main(int ac, char **av)
 		opts.flags |= nl_format;
 	}
 
-	if (i >= ac)
-	{
-		listFiles(".", &opts, 0);
-		return (0);
-	}
-
 	FileList	files = { NULL, 0, 0 };
+
+	if (i >= ac)
+		pushFile(&files, ft_strdup("."), ".", &opts);
 
 	for (char **file = av + i; *file; ++file)
 		pushFile(&files, ft_strdup(*file), *file, &opts);
@@ -215,7 +214,7 @@ int	main(int ac, char **av)
 
 	for (int j = 0; j < files.count; ++j)
 		if (S_ISDIR(files.files[j].stat.st_mode))
-			listFiles(files.files[j].path, &opts, ac - i > 1);
+			listFiles(files.files + j, &opts, ac - i > 1);
 
 	freeFileList(&files);
 	return (0);
