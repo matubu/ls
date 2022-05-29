@@ -129,7 +129,7 @@ const sorting_func_t	sorting_map[2] = {
 void	listFiles(char *path, t_opts *opts, int showpath)
 {
 	if (showpath)
-	{ putch('\n'); put(path); puts(":"); }
+	{ put(path); puts(":"); }
 	DIR				*dir = opendir(path);
 
 	if (dir == NULL)
@@ -154,16 +154,18 @@ void	listFiles(char *path, t_opts *opts, int showpath)
 
 	printFileList(&file_list, opts);
 
+	if (!(opts->flags & nl_format))
+		putch('\n');
+
 	if (opts->flags & recusive)
 		for (int i = 0; i < file_list.count; ++i)
 			if (S_ISDIR(file_list.files[i].stat.st_mode)
 				&& ft_strcmp(file_list.files[i].name, ".")
 				&& ft_strcmp(file_list.files[i].name, ".."))
-				listFiles(file_list.files[i].path, opts, 1);
-
-	if (!(opts->flags & nl_format))
-		putch('\n');
-
+				{
+					putch('\n');
+					listFiles(file_list.files[i].path, opts, 1);
+				}
 clean:
 	freeFileList(&file_list);
 }
